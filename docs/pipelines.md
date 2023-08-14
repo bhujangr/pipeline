@@ -26,6 +26,7 @@ weight: 203
         - [Compose using Pipelines in Pipelines](#compose-using-pipelines-in-pipelines)
       - [Guarding a `Task` only](#guarding-a-task-only)
     - [Configuring the failure timeout](#configuring-the-failure-timeout)
+	- [Pipelines in Pipelines](#pipelines-in-pipelines)
   - [Using variable substitution](#using-variable-substitution)
     - [Using the `retries` and `retry-count` variable substitutions](#using-the-retries-and-retry-count-variable-substitutions)
   - [Using `Results`](#using-results)
@@ -849,6 +850,53 @@ spec:
         name: build-push
       timeout: "0h1m30s"
 ```
+
+### Pipelines in Pipelines
+> 🌱 Pipelines in Pipelines is an alpha feature. The enable-api-fields feature flag must be set to "alpha" to specify PipelineRef or PipelineSpec in a PipelineTask. This feature is in Preview Only mode and not yet supported/implemented
+
+Referencing a pipeline in a pipeline
+```
+kind: Pipeline
+metadata:
+  name: security-scans
+spec:
+  tasks:
+    - name: scorecards
+      taskSpec:
+        steps:
+          - image: alpine
+            name: step-1
+            script: |
+              echo "Generating scorecard report ..."
+    - name: codeql
+      taskSpec:
+        steps:
+          - image: alpine
+            name: step-1
+            script: |
+              echo "Generating codeql report ..."
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: clone-scan-notify
+spec:
+  tasks:
+    - name: git-clone
+      taskSpec:
+        steps:
+          - image: alpine
+            name: step-1
+            script: |
+              echo "Cloning a repo to run security scans ..."
+    - name: security-scans
+      runAfter:
+        - git-clone
+      pipelineRef:
+        name: security-scans
+---
+```
+For further information read [Pipelines in Pipelines](./pipelines-in-pipelines.md)
 
 ## Using variable substitution
 
