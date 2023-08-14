@@ -26,6 +26,7 @@ weight: 203
         - [Compose using Pipelines in Pipelines](#compose-using-pipelines-in-pipelines)
       - [Guarding a `Task` only](#guarding-a-task-only)
     - [Configuring the failure timeout](#configuring-the-failure-timeout)
+	- [Pipelines in Pipelines](#pipelines-in-pipelines)
   - [Using variable substitution](#using-variable-substitution)
     - [Using the `retries` and `retry-count` variable substitutions](#using-the-retries-and-retry-count-variable-substitutions)
   - [Using `Results`](#using-results)
@@ -849,6 +850,8 @@ spec:
         name: build-push
       timeout: "0h1m30s"
 ```
+
+### Pipelines in Pipelines
 
 ## Using variable substitution
 

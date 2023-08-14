@@ -90,13 +90,13 @@ func TestPipelineTask_ValidateRefOrSpec(t *testing.T) {
 			TaskSpec: &EmbeddedTask{},
 		},
 	}, {
-		name: "invalid pipeline task missing taskRef and taskSpec",
+		name: "invalid pipeline task missing taskRef or taskSpec or pipelineRef or pipelineSpec",
 		p: PipelineTask{
 			Name: "foo",
 		},
 		expectedError: &apis.FieldError{
 			Message: `expected exactly one, got neither`,
-			Paths:   []string{"taskRef", "taskSpec"},
+			Paths:   []string{"taskRef", "taskSpec", "pipelineRef", "pipelineSpec"},
 		},
 	}, {
 		name: "invalid pipeline task with both taskRef and taskSpec",
@@ -107,7 +107,7 @@ func TestPipelineTask_ValidateRefOrSpec(t *testing.T) {
 		},
 		expectedError: &apis.FieldError{
 			Message: `expected exactly one, got both`,
-			Paths:   []string{"taskRef", "taskSpec"},
+			Paths:   []string{"taskRef", "taskSpec", "pipelineRef", "pipelineSpec"},
 		},
 	}}
 	for _, tt := range tests {

@@ -217,21 +217,23 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 		ps            *PipelineSpec
 		expectedError apis.FieldError
 	}{{
-		name: "invalid pipeline with one pipeline task having taskRef and taskSpec both",
+		name: "invalid pipeline with one pipeline task having taskRef, taskSpec, pipelineRef and pipelineSpec",
 		ps: &PipelineSpec{
 			Description: "this is an invalid pipeline with invalid pipeline task",
 			Tasks: []PipelineTask{{
 				Name:    "valid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
 			}, {
-				Name:     "invalid-pipeline-task",
-				TaskRef:  &TaskRef{Name: "foo-task"},
-				TaskSpec: &EmbeddedTask{TaskSpec: getTaskSpec()},
+				Name:         "invalid-pipeline-task",
+				TaskRef:      &TaskRef{Name: "foo-task"},
+				TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline"},
 			}},
 		},
 		expectedError: apis.FieldError{
 			Message: `expected exactly one, got both`,
-			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec"},
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec", "tasks[1].pipelineRef", "tasks[1].pipelineSpec"},
 		},
 	}, {
 		name: "invalid pipeline with one pipeline task having when expression with invalid operator (not In/NotIn)",
@@ -2167,7 +2169,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 				}},
 			},
 		},
-		expectedError: *apis.ErrMissingOneOf("spec.tasks[0].taskRef", "spec.tasks[0].taskSpec").Also(
+		expectedError: *apis.ErrMissingOneOf("spec.tasks[0].taskRef", "spec.tasks[0].taskSpec", "spec.tasks[0].pipelineRef", "spec.tasks[0].pipelineSpec").Also(
 			&apis.FieldError{
 				Message: `invalid value ""`,
 				Paths:   []string{"spec.tasks[0].name"},
@@ -2186,7 +2188,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 				Finally: []PipelineTask{{}},
 			},
 		},
-		expectedError: *apis.ErrMissingOneOf("spec.finally[0].taskRef", "spec.finally[0].taskSpec").Also(
+		expectedError: *apis.ErrMissingOneOf("spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec").Also(
 			&apis.FieldError{
 				Message: `invalid value ""`,
 				Paths:   []string{"spec.finally[0].name"},
@@ -2250,7 +2252,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 		},
 		expectedError: apis.FieldError{
 			Message: `expected exactly one, got neither`,
-			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec"},
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
 		},
 	}, {
 		name: "final task with both tasfref and taskspec",
@@ -2270,7 +2272,29 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 		},
 		expectedError: apis.FieldError{
 			Message: `expected exactly one, got both`,
-			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec"},
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with tasfref, taskspec, pipelineref and pipelinespec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskRef:      &TaskRef{Name: "non-final-task"},
+					TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+					PipelineSpec: &PipelineSpec{},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got both`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
 		},
 	}, {
 		name: "extra parameter called final-param provided to final task which is not specified in the Pipeline",

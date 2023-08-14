@@ -289,15 +289,32 @@ func (pt *PipelineTask) validateWorkspaces(workspaceNames sets.String) (errs *ap
 	return errs
 }
 
-// validateRefOrSpec validates at least one of taskRef or taskSpec is specified
+// validateRefOrSpec validates at least one of taskRef or taskSpec or pipelineRef or pipelineSpec is specified
 func (pt PipelineTask) validateRefOrSpec() (errs *apis.FieldError) {
-	// can't have both taskRef and taskSpec at the same time
-	if pt.TaskRef != nil && pt.TaskSpec != nil {
-		errs = errs.Also(apis.ErrMultipleOneOf("taskRef", "taskSpec"))
-	}
 	// Check that one of TaskRef and TaskSpec is present
-	if pt.TaskRef == nil && pt.TaskSpec == nil {
-		errs = errs.Also(apis.ErrMissingOneOf("taskRef", "taskSpec"))
+	if pt.TaskRef == nil && pt.TaskSpec == nil && pt.PipelineRef == nil && pt.PipelineSpec == nil {
+		errs = errs.Also(apis.ErrMissingOneOf("taskRef", "taskSpec", "pipelineRef", "pipelineSpec"))
+	}
+
+	// Increment the counter whenever we encounter a field which is set
+	fieldSetCount := 0
+	if pt.TaskRef != nil {
+		fieldSetCount += 1
+	}
+	if pt.TaskSpec != nil {
+		fieldSetCount += 1
+	}
+	if pt.PipelineRef != nil {
+		fieldSetCount += 1
+	}
+	if pt.PipelineSpec != nil {
+		fieldSetCount += 1
+	}
+
+	// If one of taskRef or taskSpec or pipelineRef or pipelineSpec is set, the fieldSetCount should
+	// exactly be 1, else multiple of them were set
+	if fieldSetCount > 1 {
+		errs = errs.Also(apis.ErrMultipleOneOf("taskRef", "taskSpec", "pipelineRef", "pipelineSpec"))
 	}
 	return errs
 }
@@ -327,6 +344,12 @@ func (pt PipelineTask) validateTask(ctx context.Context) (errs *apis.FieldError)
 	}
 	if pt.TaskRef != nil {
 		errs = errs.Also(pt.TaskRef.Validate(ctx).ViaField("taskRef"))
+	}
+	if pt.PipelineRef != nil {
+		errs = errs.Also(pt.PipelineRef.Validate(ctx).ViaField("pipelineRef"))
+	}
+	if pt.PipelineSpec != nil {
+		errs = errs.Also(pt.PipelineSpec.Validate(ctx).ViaField("pipelineSpec"))
 	}
 	return errs
 }
