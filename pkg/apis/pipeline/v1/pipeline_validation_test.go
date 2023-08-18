@@ -87,7 +87,34 @@ func TestPipeline_Validate_Success(t *testing.T) {
 				Tasks: []PipelineTask{{Name: "foo", TaskRef: &TaskRef{Name: "bar", Kind: ClusterTaskRefKind}}},
 			},
 		},
-	}}
+	}, {
+		name: "valid task with pipelineRef",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{
+					{
+						Name:        "foo",
+						PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+					},
+				},
+			},
+		},
+	}, {
+		name: "valid task with pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{
+					{
+						Name:         "foo",
+						PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+					},
+				},
+			},
+		},
+	},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -217,7 +244,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 		ps            *PipelineSpec
 		expectedError apis.FieldError
 	}{{
-		name: "invalid pipeline with one pipeline task having taskRef and taskSpec both",
+		name: "invalid pipeline with one pipeline task having taskRef and taskSpec",
 		ps: &PipelineSpec{
 			Description: "this is an invalid pipeline with invalid pipeline task",
 			Tasks: []PipelineTask{{
@@ -230,8 +257,184 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			}},
 		},
 		expectedError: apis.FieldError{
-			Message: `expected exactly one, got both`,
+			Message: `expected exactly one, got multiple`,
 			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef and pipelineRef",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:        "invalid-pipeline-task",
+				TaskRef:     &TaskRef{Name: "foo-task"},
+				PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].pipelineRef"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskRef:      &TaskRef{Name: "foo-task"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskSpec and pipelineRef",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:        "invalid-pipeline-task",
+				TaskSpec:    &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskSpec", "tasks[1].pipelineRef"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskSpec and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskSpec", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having pipelineRef and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].pipelineRef", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef, taskSpec and pipelineRef",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:        "invalid-pipeline-task",
+				TaskRef:     &TaskRef{Name: "foo-task"},
+				TaskSpec:    &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec", "tasks[1].pipelineRef"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef, taskSpec and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskRef:      &TaskRef{Name: "foo-task"},
+				TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef, pipelineRef and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskRef:      &TaskRef{Name: "foo-task"},
+				PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].pipelineRef", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskSpec, pipelineRef and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskSpec", "tasks[1].pipelineRef", "tasks[1].pipelineSpec"},
+		},
+	}, {
+		name: "invalid pipeline with one pipeline task having taskRef and taskSpec and pipelineRef and pipelineSpec",
+		ps: &PipelineSpec{
+			Description: "this is an invalid pipeline with invalid pipeline task",
+			Tasks: []PipelineTask{{
+				Name:    "valid-pipeline-task",
+				TaskRef: &TaskRef{Name: "foo-task"},
+			}, {
+				Name:         "invalid-pipeline-task",
+				TaskRef:      &TaskRef{Name: "foo-task"},
+				TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+				PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+				PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+			}},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"tasks[1].taskRef", "tasks[1].taskSpec", "tasks[1].pipelineRef", "tasks[1].pipelineSpec"},
 		},
 	}, {
 		name: "invalid pipeline with one pipeline task having when expression with invalid operator (not In/NotIn)",
@@ -2084,6 +2287,12 @@ func TestValidatePipelineWithFinalTasks_Success(t *testing.T) {
 				}, {
 					Name:     "final-task-2",
 					TaskSpec: &EmbeddedTask{TaskSpec: getTaskSpec()},
+				}, {
+					Name:        "final-task-3",
+					PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+				}, {
+					Name:         "final-task-4",
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
 				}},
 			},
 		},
@@ -2167,7 +2376,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 				}},
 			},
 		},
-		expectedError: *apis.ErrMissingOneOf("spec.tasks[0].taskRef", "spec.tasks[0].taskSpec").Also(
+		expectedError: *apis.ErrMissingOneOf("spec.tasks[0].taskRef", "spec.tasks[0].taskSpec", "spec.tasks[0].pipelineRef", "spec.tasks[0].pipelineSpec").Also(
 			&apis.FieldError{
 				Message: `invalid value ""`,
 				Paths:   []string{"spec.tasks[0].name"},
@@ -2186,7 +2395,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 				Finally: []PipelineTask{{}},
 			},
 		},
-		expectedError: *apis.ErrMissingOneOf("spec.finally[0].taskRef", "spec.finally[0].taskSpec").Also(
+		expectedError: *apis.ErrMissingOneOf("spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec").Also(
 			&apis.FieldError{
 				Message: `invalid value ""`,
 				Paths:   []string{"spec.finally[0].name"},
@@ -2235,7 +2444,7 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 			Paths:   []string{"spec.finally[0].name"},
 		},
 	}, {
-		name: "final task missing taskref and taskspec",
+		name: "final task missing taskref or taskspec or pipelineRef or pipelineSpec",
 		p: &Pipeline{
 			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
 			Spec: PipelineSpec{
@@ -2250,10 +2459,10 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 		},
 		expectedError: apis.FieldError{
 			Message: `expected exactly one, got neither`,
-			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec"},
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
 		},
 	}, {
-		name: "final task with both tasfref and taskspec",
+		name: "final task with both taskref and taskspec",
 		p: &Pipeline{
 			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
 			Spec: PipelineSpec{
@@ -2269,8 +2478,194 @@ func TestValidatePipelineWithFinalTasks_Failure(t *testing.T) {
 			},
 		},
 		expectedError: apis.FieldError{
-			Message: `expected exactly one, got both`,
+			Message: `expected exactly one, got multiple`,
 			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec"},
+		},
+	}, {
+		name: "final task with taskref and pipelineRef",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:        "final-task",
+					TaskRef:     &TaskRef{Name: "non-final-task"},
+					PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].pipelineRef"},
+		},
+	}, {
+		name: "final task with taskref and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskRef:      &TaskRef{Name: "non-final-task"},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with taskspec and pipelineRef",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:        "final-task",
+					TaskSpec:    &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskSpec", "spec.finally[0].pipelineRef"},
+		},
+	}, {
+		name: "final task with taskspec and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskSpec", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with taskref, taskspec and pipelineRef",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:        "final-task",
+					TaskRef:     &TaskRef{Name: "non-final-task"},
+					TaskSpec:    &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineRef: &PipelineRef{Name: "foo-pipeline"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef"},
+		},
+	}, {
+		name: "final task with taskref, taskspec and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskRef:      &TaskRef{Name: "non-final-task"},
+					TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with taskref, pipelineRef and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskRef:      &TaskRef{Name: "non-final-task"},
+					PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with taskspec, pipelineRef and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
+		},
+	}, {
+		name: "final task with taskref, taskspec, pipelineRef and pipelineSpec",
+		p: &Pipeline{
+			ObjectMeta: metav1.ObjectMeta{Name: "pipeline"},
+			Spec: PipelineSpec{
+				Tasks: []PipelineTask{{
+					Name:    "non-final-task",
+					TaskRef: &TaskRef{Name: "non-final-task"},
+				}},
+				Finally: []PipelineTask{{
+					Name:         "final-task",
+					TaskRef:      &TaskRef{Name: "non-final-task"},
+					TaskSpec:     &EmbeddedTask{TaskSpec: getTaskSpec()},
+					PipelineRef:  &PipelineRef{Name: "foo-pipeline"},
+					PipelineSpec: &PipelineSpec{Description: "foo-pipeline-description"},
+				}},
+			},
+		},
+		expectedError: apis.FieldError{
+			Message: `expected exactly one, got multiple`,
+			Paths:   []string{"spec.finally[0].taskRef", "spec.finally[0].taskSpec", "spec.finally[0].pipelineRef", "spec.finally[0].pipelineSpec"},
 		},
 	}, {
 		name: "extra parameter called final-param provided to final task which is not specified in the Pipeline",
